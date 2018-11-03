@@ -19,21 +19,70 @@
 
 // #include "buckler.h"
 
-uint32_t SenseOneCycle() {
-	// This DOesn't Work!
-	// nrf_gpio_pin_set(pin)
-	// nrf_gpio_pin_clear(pin)
-	nrf_gpio_pin_clear(6);
-	nrf_gpio_cfg_input(7, NRF_GPIO_PIN_NOPULL);
-	nrf_gpio_cfg_output(7);
+// This value is empirically determined, taken from the Arduino library
+const int CS_Timeout_Millis = 2000 * 310;
+
+#define SEND_PIN 6
+#define RECV_PIN 7
+
+// ----------------------------
+// Attempts to sense one touch output event. 
+// If no event is detected, -1 is returned
+// ----------------------------
+int SenseOneCycle() {
+	int total = 0;
+	// Turn off the send pin, let the recv pin drain to 0v
+	// This is accomplished by setting it from input->output->input
+	nrf_gpio_pin_clear(SEND_PIN);
+	nrf_gpio_cfg_input(RECV_PIN, NRF_GPIO_PIN_NOPULL);
+	nrf_gpio_cfg_output(RECV_PIN);
+	nrf_gpio_pin_clear(RECV_PIN);
 	nrf_delay_ms(10);
 	nrf_gpio_cfg_input(7, NRF_GPIO_PIN_NOPULL);
-	nrf_gpio_pin_set(6);
-	nrf_delay_ms(10);
-	//nrf_gpio_pin_clear(6);
-	nrf_delay_ms(10);
-	return nrf_gpio_pin_read(7);
+
+	// Turn on SEND signal, wait for RECV pin to charge up to 5v
+	nrf_gpio_pin_set(SEND_PIN);
+	while(!nrf_gpio_pin_read(RECV_PIN) && total < CS_Timeout_Millis) {
+		// takes about 10 ticks to charge up
+		total++;
+	}
+	if (total >= CS_Timeout_Millis) {
+		return -1;
+	}
+
+	// This charges up RECV pin a little bit more (above threshold
+	// determined by the above loop)
+	nrf_gpio_pin_set(RECV_PIN);
+	nrf_gpio_cfg_output(RECV_PIN);
+	nrf_gpio_pin_set(RECV_PIN);
+	nrf_gpio_cfg_input(RECV_PIN, NRF_GPIO_PIN_NOPULL);
+	// Turn off send signal
+	nrf_gpio_pin_clear(SEND_PIN);
+
+	// Wait for RECV pin to drain (if user is touching fabric)
+	// or wait for timeout
+	while (nrf_gpio_pin_read(7) && total < CS_Timeout_Millis) {
+		total++;
+	}
+	// Return value changes based on how much of the fabric is touched
+	return (total >= CS_Timeout_Millis) ? -1 : total;
 }
+
+// This value is determined by the size of the conductive fabric 
+// determined experimentally
+uint32_t touchThreshold = 1000;
+
+// ----------------------------
+// Returns true if detected touch event is above the set threshold
+// ----------------------------
+bool SenseInput() {
+	int value = SenseOneCycle();
+	if (value == -1) { return false; }
+	return value > touchThreshold;
+}
+
+// just so we can keep track of outputs
+int counter = 0;
 
 int main(void) {
   ret_code_t error_code = NRF_SUCCESS;
@@ -46,12 +95,13 @@ int main(void) {
 
   nrf_gpio_cfg_output(6);
   nrf_gpio_cfg_input(7, NRF_GPIO_PIN_NOPULL);
-  nrf_gpio_pin_set(6);
 
   // loop forever
   while (1) {
-	printf("%ld\n", SenseOneCycle());
-	//printf("%ld\n", nrf_gpio_pin_read(7));
+	counter++;
+	printf("%d: %s\n", counter, SenseInput() ? "true" : "false");
+	//printf("%d: %ld\n", counter, SenseOneCycle());
+
   }
 }
 

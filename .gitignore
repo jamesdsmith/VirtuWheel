@@ -1,3 +1,6 @@
+_build/
+*.swp
+
 [Ll]ibrary/
 [Tt]emp/
 [Oo]bj/
