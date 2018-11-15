@@ -98,7 +98,7 @@ int SenseOneCycle() {
 	// This is accomplished by setting it from input->output->input
 	nrf_gpio_pin_clear(SEND_PIN);
 	// nrf_gpio_cfg_input(RECV_PIN, NRF_GPIO_PIN_NOPULL);
-    set_input(sideA);
+    // //set_input(sideA);
 	// nrf_gpio_cfg_output(RECV_PIN);
     set_output(sideA);
 	// nrf_gpio_pin_clear(RECV_PIN);
@@ -120,13 +120,14 @@ int SenseOneCycle() {
 	// This charges up RECV pin a little bit more (above threshold
 	// determined by the above loop)
 	// nrf_gpio_pin_set(RECV_PIN);
-    write_values(sideA, 0xFF);
 	// nrf_gpio_cfg_output(RECV_PIN);
+	/*
     set_output(sideA);
 	// nrf_gpio_pin_set(RECV_PIN);
-    write_values(sideA, 0xFF);
+    write_values(sideA, 1);
 	// nrf_gpio_cfg_input(RECV_PIN, NRF_GPIO_PIN_NOPULL);
     set_input(sideA);
+    */
 	// Turn off send signal
 	nrf_gpio_pin_clear(SEND_PIN);
 
@@ -165,7 +166,7 @@ int main(void) {
   nrf_drv_twi_config_t i2c_config = NRF_DRV_TWI_DEFAULT_CONFIG;
   i2c_config.scl = SCL_PIN;
   i2c_config.sda = SDA_PIN;
-  i2c_config.frequency = NRF_TWIM_FREQ_100K;
+  i2c_config.frequency = NRF_TWIM_FREQ_400K;
   error_code = nrf_twi_mngr_init(&twi_mngr_instance, &i2c_config);
   APP_ERROR_CHECK(error_code);
 
