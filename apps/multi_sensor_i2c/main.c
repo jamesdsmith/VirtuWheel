@@ -29,6 +29,10 @@ NRF_TWI_MNGR_DEF(twi_mngr_instance, 5, 0);
 #define reg_offset 0x12
 #define SCL_PIN 29
 #define SDA_PIN 28
+
+#define SEND_PIN 6
+#define RECV_PIN 7
+
 static const nrf_twi_mngr_t* i2c_manager = NULL;
 void set_output(uint8_t A)
 {
@@ -81,79 +85,59 @@ uint8_t read_values(uint8_t side) {
   return rx_buf;
 }
 
+#define READ_BIT(v, b) ((v >> b) & 1)
+void print_binary(uint8_t value) {
+    printf("%d%d%d%d%d%d%d%d\n", 
+            READ_BIT(value, 7), 
+            READ_BIT(value, 6), 
+            READ_BIT(value, 5), 
+            READ_BIT(value, 4), 
+            READ_BIT(value, 3), 
+            READ_BIT(value, 2), 
+            READ_BIT(value, 1), 
+            READ_BIT(value, 0));
+}
 
 // This value is empirically determined, taken from the Arduino library
-const int CS_Timeout_Millis = 2000 * 310;
+const int CS_Timeout_Millis = 10000;
 
-#define SEND_PIN 6
-#define RECV_PIN 7
+static int dischargeTimes[8] = {0};
 
 // ----------------------------
 // Attempts to sense one touch output event. 
 // If no event is detected, -1 is returned
-static int dischargeTimes[8] = {0};
 // ----------------------------
 int SenseOneCycle() {
 	int total = 0;
-  dischargeTimes[0] = 0;
-  dischargeTimes[1] = 0;
-  dischargeTimes[2] = 0;
-  dischargeTimes[3] = 0;
-  dischargeTimes[4] = 0;
-  dischargeTimes[5] = 0;
-  dischargeTimes[6] = 0;
-  dischargeTimes[7] = 0;
-	// Turn off the send pin, let the recv pin drain to 0v
-	// This is accomplished by setting it from input->output->input
-	nrf_gpio_pin_clear(SEND_PIN);
-	// nrf_gpio_cfg_input(RECV_PIN, NRF_GPIO_PIN_NOPULL);
-    // //set_input(sideA);
-	// nrf_gpio_cfg_output(RECV_PIN);
+    dischargeTimes[0] = 0;
+    dischargeTimes[1] = 0;
+    dischargeTimes[2] = 0;
+    dischargeTimes[3] = 0;
+    dischargeTimes[4] = 0;
+    dischargeTimes[5] = 0;
+    dischargeTimes[6] = 0;
+    dischargeTimes[7] = 0;
+
     set_output(sideA);
-	// nrf_gpio_pin_clear(RECV_PIN);
     write_values(sideA, 0);
-	nrf_delay_ms(10);
-	// nrf_gpio_cfg_input(RECV_PIN, NRF_GPIO_PIN_NOPULL);
+    // wait for the pin to full lose charge. There might be a faster
+    // way to do this
+	nrf_delay_ms(50);
     set_input(sideA);
 
-	// Turn on SEND signal, wait for RECV pin to charge up to 5v
-	nrf_gpio_pin_set(SEND_PIN);
-	while(read_values(sideA) != 0x3 && total < CS_Timeout_Millis) {
-		// takes about 10 ticks to charge up
+    // Notice the logical NOT, This is because we are looking for active high
+    uint8_t value = ~read_values(sideA);
+	while (value != 0 && total < CS_Timeout_Millis) {
 		total++;
-	}
-	if (total >= CS_Timeout_Millis) {
-		return -1;
-	}
-
-	// This charges up RECV pin a little bit more (above threshold
-	// determined by the above loop)
-	// nrf_gpio_pin_set(RECV_PIN);
-	// nrf_gpio_cfg_output(RECV_PIN);
-	/*
-    set_output(sideA);
-	// nrf_gpio_pin_set(RECV_PIN);
-    write_values(sideA, 1);
-	// nrf_gpio_cfg_input(RECV_PIN, NRF_GPIO_PIN_NOPULL);
-    set_input(sideA);
-    */
-	// Turn off send signal
-	nrf_gpio_pin_clear(SEND_PIN);
-
-	// Wait for RECV pin to drain (if user is touching fabric)
-	// or wait for timeout
-  uint8_t value = read_values(sideA);
-	while (value && total < CS_Timeout_Millis) {
-		total++;
-    dischargeTimes[0] += value&1;
-    dischargeTimes[1] += (value>>1)&1;
-    dischargeTimes[2] += (value>>2)&1;
-    dischargeTimes[3] += (value>>3)&1;
-    dischargeTimes[4] += (value>>4)&1;
-    dischargeTimes[5] += (value>>5)&1;
-    dischargeTimes[6] += (value>>6)&1;
-    dischargeTimes[7] += (value>>7)&1;
-    value = read_values(sideA);
+        dischargeTimes[0] += value&1;
+        dischargeTimes[1] += (value>>1)&1;
+        dischargeTimes[2] += (value>>2)&1;
+        dischargeTimes[3] += (value>>3)&1;
+        dischargeTimes[4] += (value>>4)&1;
+        dischargeTimes[5] += (value>>5)&1;
+        dischargeTimes[6] += (value>>6)&1;
+        dischargeTimes[7] += (value>>7)&1;
+        value = ~read_values(sideA);
 	}
 	// Return value changes based on how much of the fabric is touched
 	return (total >= CS_Timeout_Millis) ? -1 : total;
@@ -208,18 +192,16 @@ int main(void) {
 
   printf("Started\n");
   while (1) {
-    // write_values(sideA, 0xff);
-    // nrf_delay_ms(1000);
-    // write_values(sideA, 0x00);
-    // nrf_delay_ms(1000);
-    // uint8_t data = read_values(sideA);
-    // printf("Read value: %x\n", data);
-    // nrf_delay_ms(1000);
-    
 	counter++;
 	// printf("%d: %s\n", counter, SenseInput() ? "true" : "false");
-  SenseOneCycle();
-	printf("%d: %ld %ld\n", counter, dischargeTimes[0], dischargeTimes[1]);
+    if (SenseOneCycle() == -1) {
+        printf("Timeout\n");
+    } else {
+        printf("%d: %3d %3d %3d\n", counter, 
+                dischargeTimes[0], 
+                dischargeTimes[1],
+                dischargeTimes[2]);
+    }
     nrf_delay_ms(10);
   }
 }
