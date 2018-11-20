@@ -3,22 +3,13 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-
-[Serializable]
-public class Message
-{
-    public int version;
-    public List<float> touch_points;
-}
-
 public class SerialConnection<T>
 {
     System.IO.Ports.SerialPort sp;
 
     public delegate void OnReceiveData(T data);
     public event OnReceiveData ReceiveData;
-
-
+    
     public SerialConnection(string device, int baudRate)
     {
         try

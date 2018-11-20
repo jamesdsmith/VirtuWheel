@@ -1,16 +1,24 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[Serializable]
+public class DataMessage
+{
+    public int version;
+    public List<float> touch_points;
+}
+
 public class TouchInteraction : MonoBehaviour
 {
-    public SerialConnection<Message> serial;
+    public SerialConnection<DataMessage> serial;
     public string device = "/dev/tty.usbmodem14441";
     public int baudRate = 115200;
 
     void Start()
     {
-        serial = new SerialConnection<Message>(device, baudRate);
+        serial = new SerialConnection<DataMessage>(device, baudRate);
         if (serial != null)
         {
             serial.ReceiveData += Serial_ReceiveData;
@@ -26,7 +34,7 @@ public class TouchInteraction : MonoBehaviour
         serial.Update();
     }
 
-    private void Serial_ReceiveData(Message msg)
+    private void Serial_ReceiveData(DataMessage msg)
     {
         List<float> data = msg.touch_points;
         throw new System.NotImplementedException();
