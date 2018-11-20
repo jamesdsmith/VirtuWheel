@@ -11,18 +11,19 @@ public class Message
     public List<float> touch_points;
 }
 
-public class SerialConnection : MonoBehaviour
+public class SerialConnection<T>
 {
     System.IO.Ports.SerialPort sp;
 
-    public delegate void OnReceiveData(List<float> data);
+    public delegate void OnReceiveData(T data);
     public event OnReceiveData ReceiveData;
 
-    void Start()
+
+    public SerialConnection(string device, int baudRate)
     {
         try
         {
-            sp = new System.IO.Ports.SerialPort("/dev/tty.usbmodem14441", 115200,
+            sp = new System.IO.Ports.SerialPort(device, baudRate,
                                                 System.IO.Ports.Parity.None, 8,
                                                 System.IO.Ports.StopBits.One);
             if (sp != null)
@@ -31,38 +32,40 @@ public class SerialConnection : MonoBehaviour
             }
             else
             {
-                print("Couldn't open the USB port");
+                Debug.Log("Couldn't open the USB port");
             }
         }
         catch (Exception e)
         {
-            print(e.Message);
+            Debug.Log(e.Message);
             sp = null;
         }
     }
 
     // Update is called once per frame
-    void Update()
+    public void Update()
     {
         if (sp != null)
         {
-            Message msg = null;
+            T msg = default(T);
+            bool recvMsg = false;
             // Keep pulling messages until we get the most up to date one
             while (sp.BytesToRead > 0)
             {
                 try
                 {
                     var readData = sp.ReadLine();
-                    msg = JsonUtility.FromJson<Message>(readData);
+                    msg = JsonUtility.FromJson<T>(readData);
+                    recvMsg = true;
                 }
                 catch (Exception ex)
                 {
-                    print(ex.Message);
+                    Debug.Log(ex.Message);
                 }
             }
-            if (msg != null)
+            if (recvMsg)
             {
-                ReceiveData(msg.touch_points);
+                ReceiveData(msg);
             }
         }
     }
