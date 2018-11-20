@@ -21,7 +21,7 @@ public class TouchInteraction : MonoBehaviour
         serial = new SerialConnection<DataMessage>(device, baudRate);
         if (serial != null)
         {
-            serial.ReceiveData += Serial_ReceiveData;
+            serial.ReceiveData += OnReceiveData;
         }
         else
         {
@@ -34,9 +34,9 @@ public class TouchInteraction : MonoBehaviour
         serial.Update();
     }
 
-    private void Serial_ReceiveData(DataMessage msg)
+    private void OnReceiveData(DataMessage msg)
     {
         List<float> data = msg.touch_points;
-        throw new System.NotImplementedException();
+        throw new NotImplementedException();
     }
 }
