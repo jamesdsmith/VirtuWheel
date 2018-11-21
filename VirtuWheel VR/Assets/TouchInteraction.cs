@@ -69,12 +69,14 @@ public class TouchInteraction : MonoBehaviour
         }
 
         // next two loops make sure there are the same amoutn of Touch Objects as touch points that we've detected
-        for (var i = touchIdxs.Count; i < TouchObjects.Count; ++i)
+        int removeAmt = TouchObjects.Count - touchIdxs.Count;
+        for (var i = 0; i < removeAmt; ++i)
         {
             Destroy(TouchObjects[0]);
             TouchObjects.RemoveAt(0);
         }
-        for (var i = TouchObjects.Count; i < touchIdxs.Count; ++i)
+        removeAmt = touchIdxs.Count - TouchObjects.Count;
+        for (var i = 0; i < removeAmt; ++i)
         {
             TouchObjects.Add(Instantiate(TouchObjectTemplate));
         }
