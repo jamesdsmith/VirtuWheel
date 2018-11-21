@@ -48,17 +48,18 @@ public class TouchInteraction : MonoBehaviour
             counter = 0;
         }
 
-        OnReceiveData(new DataMessage()
-        {
-            version = 1,
-            touch_points = fakeMsg
-        });
+        //OnReceiveData(new DataMessage()
+        //{
+        //    version = 1,
+        //    touch_points = fakeMsg
+        //});
     }
 
     private void OnReceiveData(DataMessage msg)
     {
         List<float> data = msg.touch_points;
         List<int> touchIdxs = new List<int>();
+
         for (var i = 0; i < data.Count; ++i)
         {
             if (data[i] >= 1)
@@ -70,6 +71,7 @@ public class TouchInteraction : MonoBehaviour
         // next two loops make sure there are the same amoutn of Touch Objects as touch points that we've detected
         for (var i = touchIdxs.Count; i < TouchObjects.Count; ++i)
         {
+            Destroy(TouchObjects[0]);
             TouchObjects.RemoveAt(0);
         }
         for (var i = TouchObjects.Count; i < touchIdxs.Count; ++i)
