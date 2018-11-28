@@ -7,8 +7,10 @@
 #include "nrf_pwr_mgmt.h"
 #include "nrf_twi_mngr.h"
 
-#define sideA 0x00
-#define sideB 0x01
+// #define sideA 0x00
+// #define sideB 0x01
+#define sideA 0x01
+#define sideB 0x00
 
 ret_code_t mcp_init(int sda_pin, int scl_pin, int freq);
 void mcp_set_output(uint8_t A);

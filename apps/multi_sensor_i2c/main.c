@@ -45,54 +45,37 @@ static int dischargeTimes[8] = {0};
 // Attempts to sense one touch output event. 
 // If no event is detected, -1 is returned
 // ----------------------------
-int SenseOneCycle() {
+int SenseOneCycle(int i) {
 	int total = 0;
-    dischargeTimes[0] = 0;
-    dischargeTimes[1] = 0;
-    dischargeTimes[2] = 0;
-    dischargeTimes[3] = 0;
-    dischargeTimes[4] = 0;
-    dischargeTimes[5] = 0;
-    dischargeTimes[6] = 0;
-    dischargeTimes[7] = 0;
+    dischargeTimes[i] = 0;
 
     mcp_set_output(sideA);
-    mcp_write_values(sideA, 0);
+    mcp_write_values(sideA, ~(1 << i));
     // wait for the pin to full lose charge. There might be a faster
     // way to do this
-	nrf_delay_ms(50);
+	nrf_delay_ms(3);
     mcp_set_input(sideA);
 
     // Notice the logical NOT, This is because we are looking for active high
     uint8_t value = ~mcp_read_values(sideA);
-	while (value != 0 && total < CS_Timeout_Millis) {
+	while ((value & (1 << i)) != 0 && total < CS_Timeout_Millis) {
 		total++;
-        dischargeTimes[0] += value&1;
-        dischargeTimes[1] += (value>>1)&1;
-        dischargeTimes[2] += (value>>2)&1;
-        dischargeTimes[3] += (value>>3)&1;
-        dischargeTimes[4] += (value>>4)&1;
-        dischargeTimes[5] += (value>>5)&1;
-        dischargeTimes[6] += (value>>6)&1;
-        dischargeTimes[7] += (value>>7)&1;
+        dischargeTimes[i] += 1;
         value = ~mcp_read_values(sideA);
 	}
 	// Return value changes based on how much of the fabric is touched
 	return (total >= CS_Timeout_Millis) ? -1 : total;
 }
 
+void SenseAll() {
+    for (int i = 0; i < 5; ++i) {
+        SenseOneCycle(i);
+    }
+}
+
 // This value is determined by the size of the conductive fabric 
 // determined experimentally
 int touchThreshold = 1000;
-
-// ----------------------------
-// Returns true if detected touch event is above the set threshold
-// ----------------------------
-bool SenseInput() {
-	int value = SenseOneCycle();
-	if (value == -1) { return false; }
-	return value > touchThreshold;
-}
 
 int main(void) {
   ret_code_t error_code = NRF_SUCCESS;
@@ -123,14 +106,17 @@ int main(void) {
   while (1) {
 	counter++;
 	// printf("%d: %s\n", counter, SenseInput() ? "true" : "false");
-    if (SenseOneCycle() == -1) {
-        printf("Timeout\n");
-    } else {
-        printf("%d: %3d %3d %3d\n", counter, 
+    // if (SenseOneCycle() == -1) {
+    //     printf("Timeout\n");
+    // } else {
+        SenseAll();
+        printf("%d: %3d %3d %3d %3d %3d\n", counter, 
                 dischargeTimes[0], 
                 dischargeTimes[1],
-                dischargeTimes[2]);
-    }
+                dischargeTimes[2],
+                dischargeTimes[3],
+                dischargeTimes[4]);
+    // }
     nrf_delay_ms(10);
   }
 }
