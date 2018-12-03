@@ -39,37 +39,42 @@ void print_binary(uint8_t value) {
 // This value is empirically determined, taken from the Arduino library
 const int CS_Timeout_Millis = 10000;
 
-static int dischargeTimes[8] = {0};
+static int dischargeTimes[32] = {0};
 
 // ----------------------------
 // Attempts to sense one touch output event. 
 // If no event is detected, -1 is returned
 // ----------------------------
-int SenseOneCycle(int i) {
+int SenseOne(int i, uint8_t side) {
 	int total = 0;
-    dischargeTimes[i] = 0;
+    // this relies on the values defined in mcp23017.h
+    int idx = side * 8 + i;
+    dischargeTimes[idx] = 0;
 
-    mcp_set_output(sideA);
-    mcp_write_values(sideA, ~(1 << i));
+    mcp_set_output(side);
+    mcp_write_values(side, ~(1 << i));
     // wait for the pin to full lose charge. There might be a faster
     // way to do this
 	nrf_delay_ms(3);
-    mcp_set_input(sideA);
+    mcp_set_input(side);
 
     // Notice the logical NOT, This is because we are looking for active high
-    uint8_t value = ~mcp_read_values(sideA);
+    uint8_t value = ~mcp_read_values(side);
 	while ((value & (1 << i)) != 0 && total < CS_Timeout_Millis) {
 		total++;
-        dischargeTimes[i] += 1;
-        value = ~mcp_read_values(sideA);
+        dischargeTimes[idx] += 1;
+        value = ~mcp_read_values(side);
 	}
 	// Return value changes based on how much of the fabric is touched
 	return (total >= CS_Timeout_Millis) ? -1 : total;
 }
 
 void SenseAll() {
-    for (int i = 0; i < 5; ++i) {
-        SenseOneCycle(i);
+    uint8_t sides[4] = {sideA, sideB, sideC, sideD};
+    for (int side_idx = 0; side_idx < 4; ++side_idx) {
+        for (int i = 0; i < 8; ++i) {
+            SenseOne(i, sides[side_idx]);
+        }
     }
 }
 
@@ -89,8 +94,10 @@ int main(void) {
   error_code = mcp_init(SDA_PIN, SCL_PIN, NRF_TWIM_FREQ_400K);
   APP_ERROR_CHECK(error_code);
 
-  //set_output(sideA);
   mcp_set_input(sideA);
+  mcp_set_input(sideB);
+  mcp_set_input(sideC);
+  mcp_set_input(sideD);
   nrf_delay_ms(50);
   // mcp_set_pull(0x00);
   int counter = 0;
@@ -105,18 +112,13 @@ int main(void) {
   printf("Started\n");
   while (1) {
 	counter++;
-	// printf("%d: %s\n", counter, SenseInput() ? "true" : "false");
-    // if (SenseOneCycle() == -1) {
-    //     printf("Timeout\n");
-    // } else {
-        SenseAll();
-        printf("%d: %3d %3d %3d %3d %3d\n", counter, 
-                dischargeTimes[0], 
-                dischargeTimes[1],
-                dischargeTimes[2],
-                dischargeTimes[3],
-                dischargeTimes[4]);
-    // }
+    SenseAll();
+    printf("%d: %3d %3d %3d %3d %3d\n", counter, 
+            dischargeTimes[0], 
+            dischargeTimes[1],
+            dischargeTimes[2],
+            dischargeTimes[3],
+            dischargeTimes[4]);
     nrf_delay_ms(10);
   }
 }
