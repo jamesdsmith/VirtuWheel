@@ -92,7 +92,7 @@ int main(void) {
   //set_output(sideA);
   mcp_set_input(sideA);
   nrf_delay_ms(50);
-  mcp_set_pull(0x00);
+  // mcp_set_pull(0x00);
   int counter = 0;
 
 
