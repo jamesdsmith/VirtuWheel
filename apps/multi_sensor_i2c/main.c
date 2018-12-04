@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-
+#include "serial_output.h"
 #include "app_error.h"
 #include "nrf.h"
 #include "nrf_delay.h"
@@ -40,6 +40,7 @@ void print_binary(uint8_t value) {
 const int CS_Timeout_Millis = 10000;
 
 static int dischargeTimes[32] = {0};
+static int touchThreshold = 2;
 
 // ----------------------------
 // Attempts to sense one touch output event. 
@@ -65,6 +66,7 @@ int SenseOne(int i, uint8_t side) {
         dischargeTimes[idx] += 1;
         value = ~mcp_read_values(side);
 	}
+  dischargeTimes[idx] /= touchThreshold;
 	// Return value changes based on how much of the fabric is touched
 	return (total >= CS_Timeout_Millis) ? -1 : total;
 }
@@ -80,7 +82,7 @@ void SenseAll() {
 
 // This value is determined by the size of the conductive fabric 
 // determined experimentally
-int touchThreshold = 1000;
+
 
 int main(void) {
   ret_code_t error_code = NRF_SUCCESS;
@@ -93,32 +95,37 @@ int main(void) {
 
   error_code = mcp_init(SDA_PIN, SCL_PIN, NRF_TWIM_FREQ_400K);
   APP_ERROR_CHECK(error_code);
-
+  printf("MCP init\n");
+  error_code = serial_init();
+  APP_ERROR_CHECK(error_code);
+  printf("Serial init\n");
   mcp_set_input(sideA);
+  printf("SideA\n");
   mcp_set_input(sideB);
+  printf("SideB\n");
   mcp_set_input(sideC);
+  printf("SideC\n");
   mcp_set_input(sideD);
+  printf("SideD\n");
   nrf_delay_ms(50);
   // mcp_set_pull(0x00);
   int counter = 0;
-
+  printf("Sides set\n");
 
   // initialize GPIO driver
-  if (!nrfx_gpiote_is_init()) {
-    error_code = nrfx_gpiote_init();
-  }
-  APP_ERROR_CHECK(error_code);
+  // if (!nrfx_gpiote_is_init()) {
+  //   error_code = nrfx_gpiote_init();
+  // }
+  // APP_ERROR_CHECK(error_code);
+  // printf("gpio_init\n");
+
+
 
   printf("Started\n");
   while (1) {
-	counter++;
+	  counter++;
     SenseAll();
-    printf("%d: %3d %3d %3d %3d %3d\n", counter, 
-            dischargeTimes[0], 
-            dischargeTimes[1],
-            dischargeTimes[2],
-            dischargeTimes[3],
-            dischargeTimes[4]);
+    serial_send(dischargeTimes);
     nrf_delay_ms(10);
   }
 }
