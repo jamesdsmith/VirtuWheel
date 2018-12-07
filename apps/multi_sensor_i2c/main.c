@@ -17,6 +17,7 @@
 #include "nrf_serial.h"
 #include "nrfx_gpiote.h"
 #include "mcp23017.h"
+#include "bsp.h"
 
 // I2C manager
 
@@ -66,7 +67,7 @@ int SenseOne(int i, uint8_t side) {
         dischargeTimes[idx] += 1;
         value = ~mcp_read_values(side);
 	}
-  dischargeTimes[idx] /= touchThreshold;
+  // dischargeTimes[idx] /= touchThreshold;
 	// Return value changes based on how much of the fabric is touched
 	return (total >= CS_Timeout_Millis) ? -1 : total;
 }
@@ -113,18 +114,31 @@ int main(void) {
   printf("Sides set\n");
 
   // initialize GPIO driver
-  // if (!nrfx_gpiote_is_init()) {
-  //   error_code = nrfx_gpiote_init();
-  // }
-  // APP_ERROR_CHECK(error_code);
-  // printf("gpio_init\n");
+  if (!nrfx_gpiote_is_init()) {
+    error_code = nrfx_gpiote_init();
+  }
+  APP_ERROR_CHECK(error_code);
+  printf("gpio_init\n");
 
-
+    // nrf_gpio_cfg_output(17);
 
   printf("Started\n");
   while (1) {
-	  counter++;
+    counter++;
     SenseAll();
+    int offset = 0;
+    // printf("%f, %f, %f, %f, %f, %f, %f, %f\n", 
+    //         dischargeTimes[offset],
+    //         dischargeTimes[offset + 1],
+    //         dischargeTimes[offset + 2],
+    //         dischargeTimes[offset + 3],
+    //         dischargeTimes[offset + 4],
+    //         dischargeTimes[offset + 5],
+    //         dischargeTimes[offset + 6],
+    //         dischargeTimes[offset + 7]);
+
+    // nrf_gpio_pin_set(17);
+
     serial_send(dischargeTimes);
     nrf_delay_ms(10);
   }

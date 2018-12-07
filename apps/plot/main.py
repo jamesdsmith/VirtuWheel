@@ -1,12 +1,15 @@
 import tkinter
 import numpy as np
+import serial
+import json
 
 window = tkinter.Tk()
 canvas = tkinter.Canvas(window, bg='black', highlightthickness=0)
-signal = np.array([30, 0, 0, 4, 5, 5, 4, 6, 0, 1])
+# signal = np.array([30, 0, 0, 4, 5, 5, 4, 6, 0, 1])
 
 yscale = 10
 r = 3
+thresh = 4
 
 class TouchPoint:
     def __init__(self):
@@ -22,7 +25,7 @@ def process(a):
     touch_pts = []
     new_touch = TouchPoint()
     for i, v in enumerate(a):
-        if v >= 1:
+        if v >= thresh:
             if new_touch.start is None:
                 new_touch.start = i
         else:
@@ -39,6 +42,16 @@ def process(a):
     return [(2 * t.start + t.length - 1) / 2  % len(a) for t in touch_pts]
 
 def loop():
+    signal = np.array([30, 0, 0, 4, 5, 5, 4, 6, 0, 1, 0])
+    try:
+        serial_data = ser.readline().decode('utf-8')
+        print(serial_data)
+        data = json.loads(serial_data)
+        print(data)
+        if 'touch_points' in data:
+            signal = data['touch_points']
+    except ValueError as e:
+        print(e)
     touch_pts = process(signal)
     window.update()
     h = canvas.winfo_height()
@@ -47,17 +60,19 @@ def loop():
     canvas.delete('all')
     ypad = 10
     canvas.create_line(0, h - ypad, w, h - ypad, fill='white', dash=(4,4))
-    x = xscale / 2
+    x = w - xscale / 2
     for v in signal:
         y = h - v * yscale
         canvas.create_line(x, h - ypad, x, y - ypad, fill='white')
         canvas.create_oval(x - r, y - r - ypad, x + r, y + r - ypad, outline='green')
-        x += xscale
-    canvas.create_line(0, h - yscale - ypad, canvas.winfo_width(), h - yscale - ypad, fill='red', dash=(4,4))
+        x -= xscale
+    canvas.create_line(0, h - yscale*thresh - ypad, canvas.winfo_width(), h - yscale*thresh - ypad, fill='red', dash=(4,4))
     for t in touch_pts:
-        canvas.create_line(t * xscale + xscale / 2, 0, t * xscale + xscale / 2, h, fill="blue", dash=(8,8))
+        canvas.create_line(w - (t * xscale + xscale / 2), 0, w - (t * xscale + xscale / 2), h, fill="blue", dash=(8,8))
     window.after(33, loop)
 canvas.pack(fill='both', expand=True)
+
+ser = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
 loop()
 window.mainloop()
 
