@@ -19,6 +19,8 @@ public class TouchInteraction : MonoBehaviour
     public GameObject TouchObjectTemplate;
     private List<GameObject> TouchObjects = new List<GameObject>();
 
+    public float AngleOffset;
+
     void Start()
     {
         serial = new SerialConnection<DataMessage>(device, baudRate);
@@ -60,13 +62,21 @@ public class TouchInteraction : MonoBehaviour
         List<float> data = msg.touch_points;
         List<int> touchIdxs = new List<int>();
 
+        // software fix for a buggy sensor
+        if (data[19] <= 1 && data[21] <= 1 && data[20] <= 2)
+        {
+            data[20] = 1;
+        }
+        string datastr = "";
         for (var i = 0; i < data.Count; ++i)
         {
-            if (data[i] >= 1)
+            datastr += data[i] + ", ";
+            if (data[i] >= 2)
             {
                 touchIdxs.Add(i);
             }
         }
+        print(datastr);
 
         // next two loops make sure there are the same amoutn of Touch Objects as touch points that we've detected
         int removeAmt = TouchObjects.Count - touchIdxs.Count;
@@ -78,7 +88,7 @@ public class TouchInteraction : MonoBehaviour
         removeAmt = touchIdxs.Count - TouchObjects.Count;
         for (var i = 0; i < removeAmt; ++i)
         {
-            TouchObjects.Add(Instantiate(TouchObjectTemplate));
+            TouchObjects.Add(Instantiate(TouchObjectTemplate, wheel.wheel.transform));
         }
 
         // Conversion from idx to angle (this may change once we calculate an angle over the average of a set of points)
@@ -87,7 +97,7 @@ public class TouchInteraction : MonoBehaviour
         for (var i = 0; i < TouchObjects.Count; ++i)
         {
             TouchObjects[i].transform.position = wheel.wheel.transform.position + wheel.wheel.transform.forward * wheel.wheel.transform.localScale.x / 2;
-            TouchObjects[i].transform.RotateAround(wheel.wheel.transform.position, wheel.wheel.transform.up, idxToAngle * touchIdxs[i]);
+            TouchObjects[i].transform.RotateAround(wheel.wheel.transform.position, wheel.wheel.transform.up, 360 - (idxToAngle * touchIdxs[i] + AngleOffset));
         }
     }
 }
