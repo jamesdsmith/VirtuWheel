@@ -4,12 +4,12 @@ import serial
 import json
 
 window = tkinter.Tk()
-canvas = tkinter.Canvas(window, bg='black', highlightthickness=0)
+canvas = tkinter.Canvas(window, bg='white', highlightthickness=0)
 # signal = np.array([30, 0, 0, 4, 5, 5, 4, 6, 0, 1])
 
 yscale = 10
 r = 3
-thresh = 4
+thresh = 6
 
 class TouchPoint:
     def __init__(self):
@@ -59,11 +59,11 @@ def loop():
     xscale = (w - 10) / len(signal)
     canvas.delete('all')
     ypad = 10
-    canvas.create_line(0, h - ypad, w, h - ypad, fill='white', dash=(4,4))
+    canvas.create_line(0, h - ypad, w, h - ypad, width=2, fill='black', dash=(4,4))
     x = w - xscale / 2
     for v in signal:
         y = h - v * yscale
-        canvas.create_line(x, h - ypad, x, y - ypad, fill='white')
+        canvas.create_line(x, h - ypad, x, y - ypad, width=2, fill='black')
         canvas.create_oval(x - r, y - r - ypad, x + r, y + r - ypad, outline='green')
         x -= xscale
     canvas.create_line(0, h - yscale*thresh - ypad, canvas.winfo_width(), h - yscale*thresh - ypad, fill='red', dash=(4,4))
@@ -72,7 +72,7 @@ def loop():
     window.after(33, loop)
 canvas.pack(fill='both', expand=True)
 
-ser = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
+ser = serial.Serial('COM4', 115200, timeout=1)
 loop()
 window.mainloop()
 
