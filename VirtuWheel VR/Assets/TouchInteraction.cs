@@ -19,7 +19,11 @@ public class TouchInteraction : MonoBehaviour
     public GameObject TouchObjectTemplate;
     private List<GameObject> TouchObjects = new List<GameObject>();
 
-    public float AngleOffset;
+    public float AngleOffset = 210;
+    public float WheelRadius = 0.12f;
+    public float TouchThreshold = 6;
+
+    public bool TouchEnabled = false;
 
     void Start()
     {
@@ -57,24 +61,36 @@ public class TouchInteraction : MonoBehaviour
         //});
     }
 
+    private float[] thresholds = new float[] {
+        5, 5, 5, 5, 5, 5, 5, 6,
+        5, 5, 5, 5, 5, 5, 5, 6,
+        5, 5, 5, 5, 5, 5, 5, 6,
+        5, 5, 5, 5, 5, 5, 5, 6,};
     private void OnReceiveData(DataMessage msg)
     {
         List<float> data = msg.touch_points;
         List<int> touchIdxs = new List<int>();
 
         // software fix for a buggy sensor
-        if (data[19] <= 1 && data[21] <= 1 && data[20] <= 2)
-        {
-            data[20] = 1;
-        }
+        //if (data[19] <= 1 && data[21] <= 1 && data[20] <= 2)
+        //{
+        //    data[20] = 1;
+        //}
         string datastr = "";
         for (var i = 0; i < data.Count; ++i)
         {
             datastr += data[i] + ", ";
-            if (data[i] >= 2)
+            if (TouchEnabled)
             {
-                touchIdxs.Add(i);
+                if (data[i] >= thresholds[i])
+                {
+                    touchIdxs.Add(i);
+                }
             }
+            //if (Mathf.Abs(data[i] - thresholds[i])  >= 2)
+            //{
+            //    touchIdxs.Add(i);
+            //}
         }
         print(datastr);
 
@@ -92,12 +108,17 @@ public class TouchInteraction : MonoBehaviour
         }
 
         // Conversion from idx to angle (this may change once we calculate an angle over the average of a set of points)
-        float idxToAngle = 10.0f;
+        float idxToAngle = 11f;
 
         for (var i = 0; i < TouchObjects.Count; ++i)
         {
-            TouchObjects[i].transform.position = wheel.wheel.transform.position + wheel.wheel.transform.forward * wheel.wheel.transform.localScale.x / 2;
-            TouchObjects[i].transform.RotateAround(wheel.wheel.transform.position, wheel.wheel.transform.up, 360 - (idxToAngle * touchIdxs[i] + AngleOffset));
+            TouchObjects[i].transform.position = wheel.wheel.transform.position + wheel.wheel.transform.up * WheelRadius;
+            TouchObjects[i].transform.rotation = Quaternion.identity;
+            TouchObjects[i].transform.RotateAround(wheel.wheel.transform.position, 
+                wheel.wheel.transform.forward, 
+                360 - (idxToAngle * touchIdxs[i] + AngleOffset));
+            TouchObjects[i].transform.Rotate(0, 0, -wheel.wheel.transform.eulerAngles.z);
+            // TouchObjects[i].transform.localRotation = wheel.wheel.transform.rotation;
         }
     }
 }

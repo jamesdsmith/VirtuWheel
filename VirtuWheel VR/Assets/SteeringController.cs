@@ -7,12 +7,10 @@ public class SteeringController : MonoBehaviour
     public ThrustmasterWheel wheelObject;
     private float lastRotation = 0;
 
+    public float WheelRange = 180;
+
     void Start()
     {
-        if (wheelObject != null)
-        {
-            wheelObject = wheelObject.GetComponent<ThrustmasterWheel>();
-        }
     }
 
     // Update is called once per frame
@@ -20,9 +18,9 @@ public class SteeringController : MonoBehaviour
     {
         if (wheelObject != null)
         {
-            float rot = Input.GetAxis("Wheel Angle") * 450;
+            float rot = Input.GetAxis("Wheel Angle") * WheelRange;
             wheelObject.wheel.transform.RotateAround(wheelObject.wheel.transform.position,
-                wheelObject.wheel.transform.up,
+                wheelObject.wheel.transform.forward,
                 rot - lastRotation);
             lastRotation = rot;
         }
